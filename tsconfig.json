@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "lib": ["es2021"],
+    "module": "node16",
+
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node16",
+
+    "declaration": true,
+    "removeComments": true,
+    "useDefineForClassFields": true,
+    "allowImportingTsExtensions": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "moduleResolution": "node10",
+      "noEmit": true
+    }
+  },
+  "include": ["src/*.ts"],
+  "exclude": ["node_modules"]
+}

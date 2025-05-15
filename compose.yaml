@@ -1,0 +1,90 @@
+name: discord
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./app.Dockerfile
+    depends_on:
+      test:
+        restart: true
+        condition: service_completed_successfully
+        required: true
+      database:
+        restart: true
+        condition: service_healthy
+        required: true
+    networks: 
+      - custom
+    restart: "no"
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+    develop:
+      watch:
+        - path: ./src
+          action: rebuild
+        - path: ./.env
+          action: rebuild
+        - path: package.json
+          action: rebuild
+        - path: ./tsconfig.json
+          action: rebuild
+
+  database:
+    build:
+      context: .
+      dockerfile: ./database.Dockerfile
+    command: ["postgres", "-c", "port=6566"]
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: discord
+    healthcheck:
+      test: pg_isready -h database -p 6566 -d discord || exit 1
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      start_interval: 5s
+      retries: 20
+    networks: 
+      - custom
+    restart: on-failure:3
+    volumes:
+      - type: volume
+        source: database
+        target: /var/lib/postgresql/data
+
+  test:
+    build:
+      context: .
+      dockerfile: ./test.Dockerfile
+    depends_on:
+      database:
+        restart: true
+        condition: service_healthy
+        required: true
+    networks: 
+      - custom
+    restart: "no"
+    develop:
+      watch:
+        - path: ./src
+          action: rebuild
+        - path: ./test
+          action: rebuild
+        - path: ./.env
+          action: rebuild
+        - path: package.json
+          action: rebuild
+        - path: ./tsconfig.json
+          action: rebuild
+        - path: ./jest.config.ts
+          action: rebuild
+
+volumes:
+  database:
+
+networks:
+  custom:
+    driver: bridge
