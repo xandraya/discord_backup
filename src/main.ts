@@ -99,7 +99,7 @@ export async function storeAttachment(channelID: string, attachment: DiscordAtta
   await CLIENT_HTTP.request(reqOpts, cb);
 }
 
-async function storeAccount(account: DiscordAccount) {
+async function storeAccount(account: DiscordAccount): Promise<void> {
   if (!PUSHED_USERS.includes(account.id)) {
     PUSHED_USERS.push(account.id);
     await CLIENT_PG.query(`INSERT INTO account (id, username, discriminator, global_name, bot, system) VALUES \
@@ -108,13 +108,11 @@ async function storeAccount(account: DiscordAccount) {
   }
 }
 
-async function storeChannel(channel: DiscordChannel): Promise<number> {
+async function storeChannel(channel: DiscordChannel): Promise<void> {
   await CLIENT_PG.query(`INSERT INTO channel (id, type, name) VALUES ('${channel.id}', '${channel.type}', '${channel.name}')`);
-
-  return 0;
 }
 
-async function storeMessages(batch: DiscordMessage[]): Promise<number> {
+async function storeMessages(batch: DiscordMessage[]): Promise<void> {
   const types = Object.keys({ 
     0: 'DEFAULT',
     1: 'RECIPIENT_ADD',
@@ -153,11 +151,24 @@ async function storeMessages(batch: DiscordMessage[]): Promise<number> {
                 message.attachments = message.message_snapshots[0].message.attachments;
                 message.mentions = message.message_snapshots[0].message.mentions;
                 message.sticker_items = message.message_snapshots[0].message.sticker_items;
+                message.embeds = message.message_snapshots[0].message.embeds;
               }
               break;
           }
         }
-       
+
+        if (message.author.bot && message.embeds && message.embeds.length > 0) {
+          if (message.content.length) message.content += '\n';
+          message.content += '<EMBED>';
+          let eContent: string = '';
+          if (message.embeds[0].author) eContent += `\n${message.embeds[0].author.name}`;
+          if (message.embeds[0].title) eContent += `\n${message.embeds[0].title}`;
+          if (message.embeds[0].description) eContent += `\n${message.embeds[0].description}`;
+          if (message.embeds[0].footer) eContent += `\n${message.embeds[0].footer.text}`;
+          if (!eContent.length) eContent = 'content-undefined';
+          message.content += eContent;
+        }
+
         // parse mentioned users
         if (message.mentions) {
           // check if user exists in the database, if not then push
@@ -171,7 +182,7 @@ async function storeMessages(batch: DiscordMessage[]): Promise<number> {
               { id: id[1], username: 'unknown-user', discriminator: "0", global_name: 'unknown-user' }
             );
             let name = matched.global_name || matched.username;
-            message.content = message.content.replaceAll(id[0], `@${name}`);
+            message.content = message.content.replaceAll(id[0], `@${name.includes(' ') ? `"${name}"` : name}`);
           }
         }
       
@@ -224,12 +235,14 @@ async function storeMessages(batch: DiscordMessage[]): Promise<number> {
         let author, recipient;
         // fetch author
         author = message.author.global_name || message.author.username;
+        author = author.includes(' ') ? `"${author}"` : author;
 
         // fetch recipient
         if (message.mentions) {
           // check if user exists in the database, if not then push
           storeAccount(message.mentions[0]);
           recipient = message.mentions[0].global_name || message.mentions[0].username;
+          recipient = recipient.includes(' ') ? `"${recipient}"` : recipient;
         }
 
         if (message.type === 1)
@@ -248,11 +261,13 @@ async function storeMessages(batch: DiscordMessage[]): Promise<number> {
           for (let user of participants)
             storeAccount(user);
 
-          const author = message.author.global_name || message.author.username;
+          let author = message.author.global_name || message.author.username;
+          author = author.includes(' ') ? `"${author}"` : author;
           const delta = (new Date(message.call.ended_timestamp || NaN) as any) - (new Date(message.timestamp) as any);
           const time = Math.round(delta/1000/60);
 
-          message.content = `@${author} started a call that lasted ${time} minutes. Call participants were: ${message.call.participants.join(', ')}`;
+          message.content = `@${author} started a call that lasted ${time} minutes. Call participants were: ${
+            participants.map(u => u.global_name || u.username).join(', ')}.`;
           break;
         }
       case 6:
@@ -274,14 +289,12 @@ async function storeMessages(batch: DiscordMessage[]): Promise<number> {
 
     // write message to database
     CLIENT_PG.query(`INSERT INTO message (id, channel_id, author_id, content, timestamp, attachments, reactions, pinned) \
-\ \ \ VALUES ('${message.id}', '${message.channel_id}', '${message.author.id}', '${message.content}', '${new Date(message.timestamp).toUTCString()}', \
+\ \ \ VALUES ('${message.id}', '${message.channel_id}', '${message.author.id}', E'${message.content.replaceAll("\\", "\\\\").replaceAll("'", "\\'")}', '${new Date(message.timestamp).toUTCString()}', \
 \ \ \ '${misc.attachments}', '${misc.reactions}', ${message.pinned}) ON CONFLICT DO NOTHING`);
   }
-
-  return 0;
 }
 
-async function main(): Promise<number> {
+async function main(): Promise<void> {
   const args = parseArgs();
   if (!process.env.TOKEN) throw new Error('TOKEN undefined');
   if (!args.channelID || typeof args.channelID !== 'string') throw new Error('Channel ID undefined');
@@ -304,8 +317,6 @@ async function main(): Promise<number> {
   console.log(`${colors.green}`, 'Done!');
 
   teardown(false);
-
-  return 0;
 }
 
 if (require.main === module) main();

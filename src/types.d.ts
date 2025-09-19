@@ -31,6 +31,13 @@ export interface DiscordGuild {
   }[]
 }
 
+interface DiscordEmbed {
+  author?: { name: string }
+  title?: string
+  description?: string
+  footer?: { text: string }
+}
+
 interface DiscordReaction {
   count: number
   emoji: {
@@ -57,6 +64,7 @@ interface DiscordMessageSnapshots {
     content: string
     attachments?: DiscordAttachment[]
     mentions?: DiscordAccount[]
+    embeds?: DiscordEmbed[]
     sticker_items?: DiscordSticker[]
   }
 }
@@ -81,6 +89,7 @@ export interface DiscordMessage {
   mentions?: DiscordAccount[]
   attachments?: DiscordAttachment[]
   reactions?: DiscordReaction[]
+  embeds?: DiscordEmbed[]
   pinned: boolean
   type: number
   message_reference?: DiscordMessageReference

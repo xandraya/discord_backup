@@ -1,5 +1,5 @@
 import { readdirSync } from 'node:fs';
-import { storeAttachment, fetchMetadata, fetchMessages } from '../src/index';
+import { storeAttachment, fetchMetadata, fetchMessages } from '../src/main';
 import { bootup, teardown } from '../src/services';
 
 import type { DiscordAttachment, DiscordGuild } from '../src/types';

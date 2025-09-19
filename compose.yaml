@@ -51,6 +51,9 @@ services:
       - custom
     restart: on-failure:3
     volumes:
+      - type: bind
+        source: ./data
+        target: /data
       - type: volume
         source: database
         target: /var/lib/postgresql/data
