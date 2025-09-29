@@ -1,5 +1,5 @@
 {
-  "name": "acd2a0bcb9501683",
+  "name": "discord_backup",
   "version": "1.0.0",
   "description": "",
   "main": "./src/main.ts",
@@ -19,8 +19,8 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "76a01a3490137f87": "github:xandraya/76a01a3490137f87",
     "dotenv": "^16.5.0",
+    "http_client": "github:xandraya/http_client",
     "pg": "^8.16.0",
     "ts-jest": "^29.3.3",
     "tsx": "^4.19.4"

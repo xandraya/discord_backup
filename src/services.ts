@@ -1,5 +1,5 @@
 import * as pg from 'pg';
-import HTTPClient from '76a01a3490137f87';
+import HTTPClient from 'http_client';
 
 import type { ParsedArgs } from './types.d';
 
